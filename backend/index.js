@@ -10,7 +10,10 @@ const app = express();
 const port = 5000;
 
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
+app.use(express.json())
+
 
 const pool = new Pool({
   user: 'postgres',
@@ -20,36 +23,34 @@ const pool = new Pool({
   port: 5432,
 });
 
+const ACCESS_TOKEN_SECRET = generateSecretKey();
+const REFRESH_TOKEN_SECRET = generateSecretKey();
+console.log(`ATS: ${ACCESS_TOKEN_SECRET}`)
+console.log(`RTS: ${REFRESH_TOKEN_SECRET}`)
 
 // Function to generate a strong secret key for JWT
-const generateSecretKey = () => {
+function generateSecretKey() {
   return crypto.randomBytes(64).toString('hex');
-};
-
-const secretKey = generateSecretKey();
-console.log('Generated Secret Key:', secretKey);
-
-
-//const secretKey = 'your_secret_key_for_jwt'; // Replace with a strong secret key for JWT
+}
 
 // Middleware to check if the user is authenticated
-const isAuthenticated = (req, res, next) => {
+function isAuthenticated(req, res, next) {
   const token = req.headers.authorization;
   if (!token) {
     return res.status(401).json({ error: 'Authentication required.' });
   }
 
   try {
-    const decodedToken = jwt.verify(token, secretKey);
+    const decodedToken = jwt.verify(token, ACCESS_TOKEN_SECRET);
     req.user = decodedToken;
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Invalid token.' });
   }
-};
+}
 
 // Middleware to check if user is an admin
-const isAdmin = (req, res, next) => {
+function isAdmin(req, res, next) {
   const userRole = req.user.role;
 
   if (userRole !== 'admin') {
@@ -57,10 +58,10 @@ const isAdmin = (req, res, next) => {
   }
 
   next();
-};
+}
 
 // Middleware to check if user can update/delete a specific note
-const canUpdateOrDeleteNote = (req, res, next) => {
+function canUpdateOrDeleteNote(req, res, next) {
   const userRole = req.user.role;
   const noteOwnerId = req.note.user_id;
 
@@ -70,54 +71,63 @@ const canUpdateOrDeleteNote = (req, res, next) => {
   }
 
   return res.status(403).json({ error: 'Access forbidden. You are not authorized to update/delete this note.' });
-};
+}
 
 // Route for user registration
 app.post('/register', async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, role } = req.body;
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const client = await pool.connect();
     await client.query(
       'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4)',
-      [username, email, hashedPassword, 'user']
+      [username, email, hashedPassword, role]
     );
+    
+    const user = result.rows[0]; // Get the inserted user details
+    
     client.release();
-    res.status(201).json({ message: 'User registered successfully!' });
+    
+    const accessToken = generateAccessToken(user.id, user.username, user.role);
+    console.log(accessToken)
+    const refreshToken = generateRefreshToken(user.id, user.username, user.role);
+    console.log(refreshToken)
+
+    return res.status(201).json({ message: 'User registered successfully!', accessToken, refreshToken });
+    //res.status(201).json({ message: 'User registered successfully!' });
+    
   } catch (error) {
     res.status(500).json({ error: 'Error registering user.' });
   }
 });
 
-// Route for user login
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+// Route for user registration
+app.post('/register', async (req, res) => {
+  const { username, email, password, role } = req.body;
 
   try {
-    const client = await pool.connect();
-    const result = await client.query('SELECT * FROM users WHERE username = $1', [username]);
-    client.release();
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4)',
+      [username, email, hashedPassword, role]
+    );
+    res.json(result)
+    
+    //client.release();
+    
+    const accessToken = generateAccessToken(username, email, role); // Use username and email here
+    console.log(accessToken);
+    const refreshToken = generateRefreshToken(username, email, role); // Use username and email here
+    console.log(refreshToken);
 
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials.' });
-    }
-
-    const user = result.rows[0];
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-
-    if (isPasswordMatch) {
-      const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, secretKey, {
-        expiresIn: '1h', // Token expires in 1 hour
-      });
-      return res.status(200).json({ token });
-    }
-
-    return res.status(401).json({ error: 'Invalid credentials.' });
+    res.status(201).json({ message: 'User registered successfully!', accessToken, refreshToken });
   } catch (error) {
-    return res.status(500).json({ error: 'Error logging in.' });
+    res.status(500).json({ error: 'Error registering user.' });
   }
 });
+
+
 
 // Route for getting user's notes
 app.get('/notes', isAuthenticated, async (req, res) => {
@@ -232,5 +242,11 @@ app.listen(port, () => {
 
 9. **Listening to Server Port:**
    - The server listens on the specified port (`5000`) and prints a message in the console indicating that the server is running.
+
+*/
+
+/*
+
+Access tokens will be used for authenticating and authorizing API requests, while refresh tokens will be used to obtain new access tokens when the old ones expire.
 
 */

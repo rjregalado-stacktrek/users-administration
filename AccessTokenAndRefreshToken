@@ -1,0 +1,5 @@
+Access token contains all the information that server needs to know if the user / device can access the resource you are requesting or not. They are usually expired tokens with a short validity period.
+
+The refresh token is used to generate a new access token. 
+
+https://medium.com/@spesakki1/about-access-token-and-refresh-token-in-jwt-c788556eb89a
