@@ -46,3 +46,32 @@ const PORT = 4000
 app.listen(PORT, () => {
 console.log(`Server running at port: ${PORT}`);
 })
+
+/**
+    ############### BREAKDOWN OF CODE ############################
+    
+    1. The server listens on port 4000 for incoming HTTP requests.
+
+    2. The generateAccessToken function generates an access token for a given user. 
+       The access token is signed using the process.env.ACCESS_TOKEN_SECRET as the 
+       secret key and has an expiration time of 40 seconds.
+
+    3. When a user logs in (/login route), the server generates an access token and 
+       a refresh token for the user. The refresh token is also signed using the 
+       process.env.REFRESH_TOKEN_SECRET as the secret key. The generated refresh token 
+       is then stored in the refreshTokens array. Both the access token and refresh 
+       token are sent back to the client as a JSON response.
+
+    4. The client can then use the received access token to access protected routes 
+       for the next 40 seconds. After the access token expires, the client can use 
+       the refresh token to request a new access token.
+
+    5. When the client needs a new access token (/token route), it sends the refresh 
+       token in the request body. The server verifies the refresh token using 
+       jwt.verify. If the refresh token is valid and exists in the refreshTokens 
+       array, the server generates a new access token and sends it back to the client.
+
+    6. If the client wants to log out (/logout route), it sends the refresh token 
+       in the request body. The server removes the refresh token from the 
+       refreshTokens array, effectively invalidating it.
+ */
