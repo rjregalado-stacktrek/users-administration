@@ -7,18 +7,18 @@ app.use(express.json());
 const users = []
 
 // Endpoints
-app.get('/users',(req, res)=>{
+app.get('/users',(req, res)=>{ // READ
     res.json(users)
 })
 
-app.post('/users', async (req, res)=>{
+app.post('/users', async (req, res)=>{// CREATE
     try {
-        //const salt = await bcrypt.genSalt()
-        //const hashPassword = await bcrypt.hash(req.body.password, salt)
-        const hashPassword = await bcrypt.hash(req.body.password, 10)
-        //console.log(salt)
+        const salt = await bcrypt.genSalt()
+        const hashPassword = await bcrypt.hash(req.body.password, salt)
+        //const hashPassword = await bcrypt.hash(req.body.password, 10)
+        console.log(salt)
         
-        //console.log(hashPassword)
+        console.log(hashPassword)
         const user = { name: req.body.name, password: hashPassword }
         users.push(user)
         res.status(201).send('Created successfully')
