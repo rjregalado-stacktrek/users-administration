@@ -11,6 +11,12 @@ function App() {
     try {
       const response = await axios.post('http://localhost:5000/api/register', { username, user_email, password });
       setMessage(response.data.message);
+      
+      setUsername('');
+      setUserEmail('');
+      setPassword('');
+
+
     } catch (error) {
       console.error('Registration error:', error);
       setMessage('Registration failed');
@@ -21,6 +27,11 @@ function App() {
     try {
       const response = await axios.post('http://localhost:5000/api/login', { username, password });
       setMessage(response.data.message);
+      
+      setUsername('');
+      setUserEmail('');
+      setPassword('');
+
     } catch (error) {
       console.error('Login error:', error);
       setMessage('Authentication failed');
@@ -29,6 +40,7 @@ function App() {
 
   const handleLogout = () => {
     setMessage('');
+
   };
 
   return (
@@ -68,6 +80,7 @@ function App() {
             <button onClick={handleRegister} className="w-full px-4 py-2 bg-green-500 text-white rounded">
               Register
             </button>
+            
             <button onClick={handleLogin} className="w-full mt-2 px-4 py-2 bg-blue-500 text-white rounded">
               Login
             </button>
